@@ -17,35 +17,82 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "tgfx/core/Font.h"
+#include "core/ScalerContext.h"
 
 namespace tgfx {
-Font::Font() : Font(Typeface::MakeDefault()) {
+Font::Font() : context(ScalerContext::Default()) {
 }
 
-Font::Font(std::shared_ptr<Typeface> tf, float textSize) {
-  setTypeface(std::move(tf));
-  setSize(textSize);
+Font::Font(std::shared_ptr<Typeface> typeface, float textSize)
+    : context(ScalerContext::Make(std::move(typeface), textSize)) {
 }
 
 Font Font::makeWithSize(float newSize) const {
-  auto newFont = *this;
-  newFont.setSize(newSize);
-  return newFont;
+  return Font(context->makeWithSize(newSize));
+}
+
+std::shared_ptr<Typeface> Font::getTypeface() const {
+  return context->getTypeface();
 }
 
 void Font::setTypeface(std::shared_ptr<Typeface> newTypeface) {
-  if (newTypeface == nullptr) {
-    typeface = Typeface::MakeDefault();
-  } else {
-    typeface = std::move(newTypeface);
-  }
+  context = context->makeWithTypeface(std::move(newTypeface));
+}
+
+float Font::getSize() const {
+  return context->getSize();
 }
 
 void Font::setSize(float newSize) {
-  if (newSize <= 0) {
-    size = 12.0f;
-  } else {
-    size = newSize;
-  }
+  context = context->makeWithSize(newSize);
 }
+
+bool Font::isFauxBold() const {
+  return context->isFauxBold();
+}
+
+void Font::setFauxBold(bool value) {
+  context = context->makeWithFauxBold(value);
+}
+
+bool Font::isFauxItalic() const {
+  return context->isFauxItalic();
+}
+
+void Font::setFauxItalic(bool value) {
+  context = context->makeWithFauxItalic(value);
+}
+
+FontMetrics Font::getMetrics() const {
+  return context->getMetrics();
+}
+
+GlyphID Font::getGlyphID(const std::string& name) const {
+  return context->getTypeface()->getGlyphID(name);
+}
+
+GlyphID Font::getGlyphID(Unichar unichar) const {
+  return context->getTypeface()->getGlyphID(unichar);
+}
+
+Rect Font::getBounds(GlyphID glyphID) const {
+  return context->getBounds(glyphID);
+}
+
+float Font::getAdvance(GlyphID glyphID, bool verticalText) const {
+  return context->getAdvance(glyphID, verticalText);
+}
+
+bool Font::getPath(GlyphID glyphID, Path* path) const {
+  return context->getPath(glyphID, path);
+}
+
+std::shared_ptr<ImageBuffer> Font::getGlyphImage(GlyphID glyphID, Matrix* matrix) const {
+  return context->getGlyphImage(glyphID, matrix);
+}
+
+Point Font::getVerticalOffset(GlyphID glyphID) const {
+  return context->getVerticalOffset(glyphID);
+}
+
 }  // namespace tgfx

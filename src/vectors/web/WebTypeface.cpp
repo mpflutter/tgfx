@@ -43,7 +43,8 @@ std::shared_ptr<Typeface> Typeface::MakeFromData(std::shared_ptr<Data>, int) {
 }
 
 std::shared_ptr<Typeface> Typeface::MakeDefault() {
-  return WebTypeface::Make("Arial");
+  static auto typeface = WebTypeface::Make("Arial");
+  return typeface;
 }
 
 std::shared_ptr<WebTypeface> WebTypeface::Make(const std::string& name, const std::string& style) {

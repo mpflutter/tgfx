@@ -114,7 +114,8 @@ std::shared_ptr<Typeface> Typeface::MakeFromData(std::shared_ptr<Data> data, int
 }
 
 std::shared_ptr<Typeface> Typeface::MakeDefault() {
-  return std::make_shared<EmptyTypeface>();
+  static auto typeface = std::make_shared<EmptyTypeface>();
+  return typeface;
 }
 
 static std::mutex& FTMutex() {

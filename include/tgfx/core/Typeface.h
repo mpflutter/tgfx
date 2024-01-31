@@ -22,8 +22,11 @@
 #include "tgfx/core/FontMetrics.h"
 #include "tgfx/core/ImageBuffer.h"
 #include "tgfx/core/Path.h"
+#include "tgfx/utils/BytesKey.h"
 
 namespace tgfx {
+class ScalerContext;
+
 /**
  * 16 bit unsigned integer to hold a glyph index.
  */
@@ -125,6 +128,8 @@ class Typeface {
   virtual std::shared_ptr<Data> copyTableData(FontTableTag tag) const = 0;
 
  protected:
+  mutable std::mutex locker = {};
+
   /**
    * Returns the FontMetrics associated with this typeface.
    */
@@ -164,6 +169,10 @@ class Typeface {
   virtual Point getVerticalOffset(GlyphID glyphID, float size, bool fauxBold,
                                   bool fauxItalic) const = 0;
 
+ private:
+  BytesKeyMap<std::weak_ptr<ScalerContext>> scalerCache = {};
+
   friend class Font;
+  friend class ScalerContext;
 };
 }  // namespace tgfx
