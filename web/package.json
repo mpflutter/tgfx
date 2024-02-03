@@ -11,6 +11,7 @@
     "clean": "npm run clean:tgfx && rimraf demo/build demo/wasm demo/*.js demo/*.map demo/cmake-build-*",
     "build:tgfx": "npm run clean:tgfx && tsc -p ./tsconfig.type.json && rollup -c ./script/rollup.tgfx.js",
     "build": "node script/cmake.demo.js && npm run build:tgfx && rollup -c ./script/rollup.demo.js",
+    "build:ckadapter": "node script/cmake.ckadapter.js && npm run build:tgfx && rollup -c ./script/rollup.ckadapter.js",
     "build:debug": "node script/cmake.demo.js --debug && npm run build:tgfx && rollup -c ./script/rollup.demo.js",
     "dev": "npm run build:tgfx && rollup -c ./script/rollup.dev.js -w",
     "server": "http-server -p 8081 ../ -g -c-1 --cors -o web/demo"

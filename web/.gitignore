@@ -6,6 +6,10 @@ demo/*.js
 demo/wasm
 demo/build-hello2d
 demo/.hello2d.wasm.md5
+ckadapter/*.js
+ckadapter/wasm
+ckadapter/build-ckadapter
+ckadapter/.ckadapter.wasm.md5
 src/wasm
 emsdk/
 
