@@ -93,33 +93,35 @@ window.onload = async () => {
     console.log("surface", surface);
     if (surface) {
       const canvas = surface.getCanvas();
-
       console.log("canvas", canvas);
       const paint = new CanvasKit.Paint();
       paint.setStyle(CanvasKit.PaintStyle.Fill);
       const color = CanvasKit.Color(255, 0, 0, 255);
       paint.setColor(color);
       console.log("paint", paint, "color", color);
-      const rect = CanvasKit.XYWHRect(44, 44, 100, 100);
-      console.log("rect", rect);
-      canvas.drawRect(rect, paint);
+      const rrect = CanvasKit.RRectXY(
+        CanvasKit.XYWHRect(44, 44, 100, 100),
+        6,
+        6
+      );
+      canvas.drawRRect(rrect, paint);
       surface.flush();
 
-      setTimeout(() => {
-        const paint = new CanvasKit.Paint();
-        paint.setStyle(CanvasKit.PaintStyle.Fill);
-        const color = CanvasKit.Color(255, 255, 0, 255);
-        paint.setColor(color);
-        console.log("paint", paint, "color", color);
-        const rect = CanvasKit.XYWHRect(44, 144, 22, 22);
-        console.log("rect", rect);
-        canvas.drawRect(rect, paint);
-        const rect2 = CanvasKit.XYWHRect(44, 44, 100, 100);
-        // console.log("rect", rect);
-        canvas.drawRect(rect, paint);
-        canvas.drawRect(rect2, paint);
-        surface.flush();
-      }, 2000);
+      // setTimeout(() => {
+      //   const paint = new CanvasKit.Paint();
+      //   paint.setStyle(CanvasKit.PaintStyle.Fill);
+      //   const color = CanvasKit.Color(255, 255, 0, 255);
+      //   paint.setColor(color);
+      //   console.log("paint", paint, "color", color);
+      //   const rect = CanvasKit.XYWHRect(44, 144, 22, 22);
+      //   console.log("rect", rect);
+      //   canvas.drawRect(rect, paint);
+      //   const rect2 = CanvasKit.XYWHRect(44, 44, 100, 100);
+      //   // console.log("rect", rect);
+      //   canvas.drawRect(rect, paint);
+      //   canvas.drawRect(rect2, paint);
+      //   surface.flush();
+      // }, 2000);
     }
   }
   //   let image = await loadImage("../../resources/assets/bridge.jpg");

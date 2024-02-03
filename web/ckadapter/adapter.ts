@@ -151,28 +151,6 @@ export class Adapter implements CanvasKit {
   computeTonalColors(colors: TonalColorsInput): TonalColorsOutput {
     throw new Error("Method not implemented.");
   }
-  LTRBRect(
-    left: number,
-    top: number,
-    right: number,
-    bottom: number
-  ): Float32Array {
-    throw new Error("Method not implemented.");
-  }
-  LTRBiRect(
-    left: number,
-    top: number,
-    right: number,
-    bottom: number
-  ): Int32Array {
-    throw new Error("Method not implemented.");
-  }
-  XYWHiRect(x: number, y: number, width: number, height: number): Int32Array {
-    throw new Error("Method not implemented.");
-  }
-  RRectXY(rect: InputRect, rx: number, ry: number): Float32Array {
-    throw new Error("Method not implemented.");
-  }
   getShadowLocalBounds(
     ctm: InputMatrix,
     path: Path,
@@ -390,8 +368,34 @@ export class Adapter implements CanvasKit {
     return this.Color(r * 255, g * 255, b * 255, (a ?? 1) * 255);
   }
 
+  LTRBRect(
+    left: number,
+    top: number,
+    right: number,
+    bottom: number
+  ): Float32Array {
+    return this.CKAdapterModule.Rect.MakeLTRB(left, top, right, bottom);
+  }
+
+  LTRBiRect(
+    left: number,
+    top: number,
+    right: number,
+    bottom: number
+  ): Int32Array {
+    return this.CKAdapterModule.Rect.MakeLTRB(left, top, right, bottom);
+  }
+
   XYWHRect(x: number, y: number, width: number, height: number): Float32Array {
     return this.CKAdapterModule.Rect.MakeXYWH(x, y, width, height);
+  }
+
+  XYWHiRect(x: number, y: number, width: number, height: number): Int32Array {
+    return this.CKAdapterModule.Rect.MakeXYWH(x, y, width, height);
+  }
+
+  RRectXY(rect: InputRect, rx: number, ry: number): any {
+    return { rect: rect, radiusX: rx, radiusY: ry };
   }
 
   GetWebGLContext(
@@ -568,7 +572,13 @@ export class TGFXSurface
   }
 
   requestAnimationFrame(drawFrame: (_: Canvas) => void): number {
-    throw new Error("Method not implemented.");
+    if (typeof window === "object" && (window as any).requestAnimationFrame) {
+      return (window as any).requestAnimationFrame(() => {
+        drawFrame(this.getCanvas());
+      }) as number;
+    } else {
+      return -1;
+    }
   }
 
   sampleCnt(): number {
@@ -763,9 +773,11 @@ export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
   ): void {
     throw new Error("Method not implemented.");
   }
+
   drawRect(rect: InputRect, paint: Paint): void {
     this.tgfxCanvas.drawRect(rect, paint);
   }
+
   drawRect4f(
     left: number,
     top: number,
@@ -773,11 +785,22 @@ export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
     bottom: number,
     paint: Paint
   ): void {
-    throw new Error("Method not implemented.");
+    const rect = Adapter.CKAdapterModule.Rect.MakeLTRB(
+      left,
+      top,
+      right,
+      bottom
+    );
+    this.drawRect(rect, paint);
   }
+
   drawRRect(rrect: InputRRect, paint: Paint): void {
-    throw new Error("Method not implemented.");
+    const _rrect: TGFXRRect = rrect as any;
+    const path = new Adapter.CKAdapterModule.Path();
+    path.addRoundRect(_rrect.rect, _rrect.radiusX, _rrect.radiusY, false, 0);
+    this.tgfxCanvas.drawPath(path, paint);
   }
+
   drawShadow(
     path: Path,
     zPlaneParams: InputVector3,
@@ -863,4 +886,10 @@ export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
   ): boolean {
     throw new Error("Method not implemented.");
   }
+}
+
+interface TGFXRRect {
+  rect: InputRect;
+  radiusX: number;
+  radiusY: number;
 }

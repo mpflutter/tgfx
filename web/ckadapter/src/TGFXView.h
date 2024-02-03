@@ -21,11 +21,6 @@
 #include <emscripten/bind.h>
 #include "drawers/Drawer.h"
 #include "tgfx/opengl/webgl/WebGLWindow.h"
-#include "tgfx/gpu/Surface.h"
-#include "tgfx/core/Canvas.h"
-#include "tgfx/core/Rect.h"
-#include "tgfx/core/Paint.h"
-#include "tgfx/core/Color.h"
 
 namespace ckadapter {
 class TGFXView {
