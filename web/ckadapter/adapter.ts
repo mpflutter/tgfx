@@ -293,7 +293,7 @@ export class Adapter implements CanvasKit {
   ClipOp: ClipOpEnumValues;
   ColorChannel: ColorChannelEnumValues;
   ColorType: ColorTypeEnumValues;
-  FillType: FillTypeEnumValues;
+  FillType: FillTypeEnumValues; // done
   FilterMode: FilterModeEnumValues;
   FontEdging: FontEdgingEnumValues;
   FontHinting: FontHintingEnumValues;
@@ -302,7 +302,7 @@ export class Adapter implements CanvasKit {
   MipmapMode: MipmapModeEnumValues;
   PaintStyle: PaintStyleEnumValues; // done
   Path1DEffect: Path1DEffectStyleEnumValues;
-  PathOp: PathOpEnumValues;
+  PathOp: PathOpEnumValues; // done
   PointMode: PointModeEnumValues;
   ColorSpace: ColorSpaceEnumValues;
   StrokeCap: StrokeCapEnumValues; // done
@@ -363,6 +363,8 @@ export class Adapter implements CanvasKit {
     this.StrokeJoin = CKAdapterModule.StrokeJoin;
     this.Paint = AdapterPaint;
     this.Path = AdapterPath as any;
+    this.PathOp = CKAdapterModule.PathOp;
+    this.FillType = CKAdapterModule.FillType;
     this.TRANSPARENT = this.Color(0, 0, 0, 0);
     this.BLACK = this.Color(0, 0, 0);
     this.WHITE = this.Color(255, 255, 255);
@@ -1046,7 +1048,7 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   static MakeFromSVGString(str: string): Path | null {
-    throw new Error("Method not implemented.");
+    throw new Error("Not support SVG");
   }
   static MakeFromVerbsPointsWeights(
     verbs: VerbList,
@@ -1056,7 +1058,7 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   addArc(oval: InputRect, startAngle: number, sweepAngle: number): Path {
-    throw new Error("Method not implemented.");
+    return this.tgfxPath.addArc(oval, startAngle, sweepAngle);
   }
   addCircle(
     x: number,
@@ -1064,26 +1066,46 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     r: number,
     isCCW?: boolean | undefined
   ): Path {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.addOval(
+      Adapter.CKAdapterModule.Rect.MakeXYWH(x - r, y - r, r * 2, r * 2),
+      isCCW,
+      0
+    );
+    return this;
   }
   addOval(
     oval: InputRect,
     isCCW?: boolean | undefined,
     startIndex?: number | undefined
   ): Path {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.addOval(oval, isCCW, startIndex);
+    return this;
   }
   addPath(...args: any[]): Path | null {
-    throw new Error("Method not implemented.");
+    if (args[0]) {
+      const p = args[0];
+      const op = args[1] ?? Adapter.CKAdapterModule.PathOp.Append;
+      this.tgfxPath.addPath(p instanceof AdapterPath ? p.tgfxPath : p, op);
+    }
+    return this;
   }
   addPoly(points: InputFlattenedPointArray, close: boolean): Path {
     throw new Error("Method not implemented.");
   }
   addRect(rect: InputRect, isCCW?: boolean | undefined): Path {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.addRect(rect, isCCW, 0);
+    return this;
   }
   addRRect(rrect: InputRRect, isCCW?: boolean | undefined): Path {
-    throw new Error("Method not implemented.");
+    const _rrect: AdapterRRect = rrect as any;
+    this.tgfxPath.addRoundRect(
+      _rrect.rect,
+      _rrect.radiusX,
+      _rrect.radiusY,
+      isCCW ?? false,
+      0
+    );
+    return this;
   }
   addVerbsPointsWeights(
     verbs: VerbList,
@@ -1131,7 +1153,8 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   close(): Path {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.close();
+    return this;
   }
   computeTightBounds(outputArray?: Float32Array | undefined): Float32Array {
     throw new Error("Method not implemented.");
@@ -1140,13 +1163,15 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   contains(x: number, y: number): boolean {
-    throw new Error("Method not implemented.");
+    return this.tgfxPath.contains(x, y);
   }
   copy(): Path {
-    throw new Error("Method not implemented.");
+    const newPath = new AdapterPath();
+    newPath.addPath(this);
+    return newPath;
   }
   countPoints(): number {
-    throw new Error("Method not implemented.");
+    return this.tgfxPath.countPoints();
   }
   cubicTo(
     cpx1: number,
@@ -1156,19 +1181,23 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     x: number,
     y: number
   ): Path {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.cubicTo(cpx1, cpy1, cpx2, cpy2, x, y);
+    return this;
   }
   dash(on: number, off: number, phase: number): boolean {
     throw new Error("Method not implemented.");
   }
   equals(other: Path): boolean {
-    throw new Error("Method not implemented.");
+    return this.tgfxPath.equals(
+      this.tgfxPath,
+      other instanceof AdapterPath ? other.tgfxPath : other
+    );
   }
   getBounds(outputArray?: Float32Array | undefined): Float32Array {
-    throw new Error("Method not implemented.");
+    return this.tgfxPath.getBounds();
   }
   getFillType(): EmbindEnumEntity {
-    throw new Error("Method not implemented.");
+    return this.getFillType();
   }
   getPoint(
     index: number,
@@ -1177,7 +1206,7 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   isEmpty(): boolean {
-    throw new Error("Method not implemented.");
+    return this.tgfxPath.isEmpty();
   }
   isVolatile(): boolean {
     throw new Error("Method not implemented.");
@@ -1200,7 +1229,8 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   quadTo(x1: number, y1: number, x2: number, y2: number): Path {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.quadTo(x1, y1, x2, y2);
+    return this;
   }
   rArcTo(
     rx: number,
@@ -1233,7 +1263,7 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   reset(): void {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.reset();
   }
   rewind(): void {
     throw new Error("Method not implemented.");
@@ -1248,7 +1278,7 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   setFillType(fill: EmbindEnumEntity): void {
-    throw new Error("Method not implemented.");
+    this.tgfxPath.setFillType(fill);
   }
   setIsVolatile(volatile: boolean): void {
     throw new Error("Method not implemented.");
@@ -1263,7 +1293,7 @@ class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
     throw new Error("Method not implemented.");
   }
   toSVGString(): string {
-    throw new Error("Method not implemented.");
+    throw new Error("Not support SVG");
   }
   transform(...args: any[]): Path {
     throw new Error("Method not implemented.");

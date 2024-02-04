@@ -113,8 +113,25 @@ window.onload = async () => {
       const path = new CanvasKit.Path();
       path.moveTo(44, 44);
       path.lineTo(144, 144);
+      path.cubicTo(144, 144, 88, 88, 200, 200);
       path.lineTo(44, 144);
+      path.close();
+
+      const circlePath = new CanvasKit.Path();
+      circlePath.addCircle(188, 188, 88);
+      path.addPath(circlePath);
+
+      const ovalPath = new CanvasKit.Path();
+      ovalPath.addOval(CanvasKit.XYWHRect(166, 166, 120, 44));
+      path.addPath(ovalPath);
+
       canvas.drawPath(path, paint);
+
+      console.log("isEmpty", path.isEmpty());
+      console.log("path.contains(44, 44)", path.contains(44, 44));
+      console.log("path.getBounds", path.getBounds());
+
+      // canvas.drawPath(ovalPath, paint);
       surface.flush();
 
       // setTimeout(() => {

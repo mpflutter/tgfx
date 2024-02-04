@@ -21,6 +21,7 @@
 #include "tgfx/core/Color.h"
 #include "tgfx/core/Paint.h"
 #include "tgfx/core/Path.h"
+#include "tgfx/core/PathTypes.h"
 #include "tgfx/core/Point.h"
 #include "tgfx/core/Rect.h"
 #include "tgfx/core/Stroke.h"
@@ -159,8 +160,49 @@ EMSCRIPTEN_BINDINGS(TGFXSKAdapter) {
 
   class_<Path>("Path")
       .constructor<>()
-      .function("moveTo", static_cast<void (Path::*)(float, float)>(&Path::moveTo))
-      .function("lineTo", static_cast<void (Path::*)(float, float)>(&Path::lineTo))
-      .function("addRoundRect", &Path::addRoundRect)
-      .function("reset", &Path::reset);
+      .function("getFillType", &Path::getFillType)
+      .function("setFillType", &Path::setFillType)
+      .function("getBounds", &Path::getBounds)
+      .function("isEmpty", &Path::isEmpty)
+      .function("equals", optional_override([](const Path& a, const Path& b) { return a == b; }))
+      .function("contains", select_overload<bool(float, float) const>(&Path::contains))
+      .function("moveTo", select_overload<void(float, float)>(&Path::moveTo))
+      .function("moveToPoint", select_overload<void(const Point&)>(&Path::moveTo))
+      .function("lineTo", select_overload<void(float, float)>(&Path::lineTo))
+      .function("lineToPoint", select_overload<void(const Point&)>(&Path::lineTo))
+      .function("quadTo", select_overload<void(float, float, float, float)>(&Path::quadTo))
+      .function("quadToPoint", select_overload<void(const Point&, const Point&)>(&Path::quadTo))
+      .function("cubicTo",
+                select_overload<void(float, float, float, float, float, float)>(&Path::cubicTo))
+      .function("cubicToPoint",
+                select_overload<void(const Point&, const Point&, const Point&)>(&Path::cubicTo))
+      .function("close", &Path::close)
+      .function("addRect", select_overload<void(const Rect&, bool, unsigned)>(&Path::addRect))
+      .function("addRectFloat",
+                select_overload<void(float, float, float, float, bool, unsigned)>(&Path::addRect))
+      .function("addOval", select_overload<void(const Rect&, bool, unsigned)>(&Path::addOval))
+      .function("addArc", &Path::addArc)
+      .function("addRoundRect", select_overload<void(const Rect&, float, float, bool, unsigned)>(
+                                    &Path::addRoundRect))
+      .function("addPath", &Path::addPath)
+      .function("reset", &Path::reset)
+      .function("transform", &Path::transform)
+      .function("reverse", &Path::reverse)
+      // .function("decompose", &Path::decompose)
+      .function("countPoints", &Path::countPoints)
+      .function("countVerbs", &Path::countVerbs);
+
+  enum_<PathOp>("PathOp")
+      // .value("ReverseDifference", "TGFX Unsupport")
+      .value("Append", PathOp::Append)
+      .value("Difference", PathOp::Difference)
+      .value("Intersect", PathOp::Intersect)
+      .value("Union", PathOp::Union)
+      .value("XOR", PathOp::XOR);
+
+  enum_<PathFillType>("FillType")
+      .value("Winding", PathFillType::Winding)
+      .value("EvenOdd", PathFillType::EvenOdd)
+      .value("InverseWinding", PathFillType::InverseWinding)
+      .value("InverseEvenOdd", PathFillType::InverseEvenOdd);
 }
