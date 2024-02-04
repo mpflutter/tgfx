@@ -3,12 +3,14 @@ import {
   AlphaTypeEnumValues,
   AnimatedImage,
   BlendModeEnumValues,
+  Blender,
   BlenderFactory,
   BlurStyleEnumValues,
   Canvas,
   CanvasKit,
   ClipOpEnumValues,
   ColorChannelEnumValues,
+  ColorFilter,
   ColorFilterFactory,
   ColorIntArray,
   ColorMatrixHelpers,
@@ -43,6 +45,7 @@ import {
   ImageFormatEnumValues,
   ImageInfo,
   InputColor,
+  InputCommands,
   InputFlattenedPointArray,
   InputFlattenedRSXFormArray,
   InputFlattenedRectangleArray,
@@ -55,6 +58,7 @@ import {
   InputVector3,
   MallocObj,
   ManagedSkottieAnimation,
+  MaskFilter,
   MaskFilterFactory,
   Matrix3x3Helpers,
   Matrix4x4Helpers,
@@ -69,6 +73,7 @@ import {
   Path,
   Path1DEffectStyleEnumValues,
   PathConstructorAndFactory,
+  PathEffect,
   PathEffectFactory,
   PathOpEnumValues,
   PictureRecorder,
@@ -78,6 +83,7 @@ import {
   RectWidthStyleEnumValues,
   ResizePolicyEnumValues,
   RuntimeEffectFactory,
+  Shader,
   ShaderFactory,
   SkPicture,
   SkottieAnimation,
@@ -85,6 +91,7 @@ import {
   SoundMap,
   StrokeCapEnumValues,
   StrokeJoinEnumValues,
+  StrokeOpts,
   Surface,
   TextAlignEnumValues,
   TextBaselineEnumValues,
@@ -101,11 +108,13 @@ import {
   TypefaceFactory,
   TypefaceFontProviderFactory,
   VectorHelpers,
+  VerbList,
   VertexModeEnumValues,
   VerticalTextAlignEnumValues,
   Vertices,
   WebGLContextHandle,
   WebGLOptions,
+  WeightList,
 } from "./canvaskit";
 
 const handleSet = new Set();
@@ -256,8 +265,8 @@ export class Adapter implements CanvasKit {
   ParagraphStyle: ParagraphStyleConstructor;
   ContourMeasureIter: ContourMeasureIterConstructor;
   Font: FontConstructor;
-  Paint: DefaultConstructor<Paint>;
-  Path: PathConstructorAndFactory;
+  Paint: DefaultConstructor<Paint>; // wip
+  Path: PathConstructorAndFactory; // wip
   PictureRecorder: DefaultConstructor<PictureRecorder>;
   TextStyle: TextStyleConstructor;
   SlottableTextProperty: SlottableTextPropertyConstructor;
@@ -291,13 +300,13 @@ export class Adapter implements CanvasKit {
   GlyphRunFlags: GlyphRunFlagValues;
   ImageFormat: ImageFormatEnumValues;
   MipmapMode: MipmapModeEnumValues;
-  PaintStyle: PaintStyleEnumValues;
+  PaintStyle: PaintStyleEnumValues; // done
   Path1DEffect: Path1DEffectStyleEnumValues;
   PathOp: PathOpEnumValues;
   PointMode: PointModeEnumValues;
   ColorSpace: ColorSpaceEnumValues;
-  StrokeCap: StrokeCapEnumValues;
-  StrokeJoin: StrokeJoinEnumValues;
+  StrokeCap: StrokeCapEnumValues; // done
+  StrokeJoin: StrokeJoinEnumValues; // done
   TileMode: TileModeEnumValues;
   VertexMode: VertexModeEnumValues;
   InputState: InputStateEnumValues;
@@ -350,10 +359,22 @@ export class Adapter implements CanvasKit {
   constructor(readonly CKAdapterModule: any) {
     Adapter.CKAdapterModule = CKAdapterModule;
     this.PaintStyle = CKAdapterModule.PaintStyle;
-    this.Paint = CKAdapterModule.Paint;
+    this.StrokeCap = CKAdapterModule.StrokeCap;
+    this.StrokeJoin = CKAdapterModule.StrokeJoin;
+    this.Paint = AdapterPaint;
+    this.Path = AdapterPath as any;
+    this.TRANSPARENT = this.Color(0, 0, 0, 0);
+    this.BLACK = this.Color(0, 0, 0);
+    this.WHITE = this.Color(255, 255, 255);
+    this.RED = this.Color(255, 0, 0);
+    this.GREEN = this.Color(0, 255, 0);
+    this.BLUE = this.Color(0, 0, 255);
+    this.YELLOW = this.Color(255, 255, 0);
+    this.CYAN = this.Color(0, 255, 255);
+    this.MAGENTA = this.Color(255, 0, 255);
   }
 
-  webGlContexts: Record<WebGLContextHandle, TGFXContext> = {};
+  webGlContexts: Record<WebGLContextHandle, AdapterContext> = {};
 
   Color(r: number, g: number, b: number, a?: number | undefined): Float32Array {
     return this.CKAdapterModule.Color.FromRGBA(r, g, b, a ?? 255);
@@ -404,7 +425,7 @@ export class Adapter implements CanvasKit {
   ): WebGLContextHandle {
     const tgfxView = this.CKAdapterModule.TGFXView.MakeFrom("#" + canvas.id);
     const handle = generateUniqueHandle();
-    const tgfxContext = new TGFXContext(tgfxView);
+    const tgfxContext = new AdapterContext(tgfxView);
     tgfxView.updateSize(2.0); // todo: screen scale
     tgfxView.createWindow();
     this.webGlContexts[handle] = tgfxContext;
@@ -414,7 +435,7 @@ export class Adapter implements CanvasKit {
   MakeGrContext(handle: WebGLContextHandle): GrDirectContext | null {
     const tgfxContext = this.webGlContexts[handle];
     if (tgfxContext) {
-      const grContext = new TGFXGrDirectContext(tgfxContext);
+      const grContext = new AdapterGrDirectContext(tgfxContext);
       tgfxContext.grContext = grContext;
       return grContext;
     }
@@ -449,22 +470,22 @@ export class Adapter implements CanvasKit {
     sampleCount?: number | undefined,
     stencil?: number | undefined
   ): Surface | null {
-    let _ctx = ctx as TGFXGrDirectContext;
+    let _ctx = ctx as AdapterGrDirectContext;
     return _ctx.createSurface(width, height);
   }
 }
 
-export class TGFXContext {
+export class AdapterContext {
   constructor(readonly tgfxView: any) {}
 
-  grContext?: TGFXGrDirectContext;
+  grContext?: AdapterGrDirectContext;
 
   draw() {
     this.tgfxView.draw();
   }
 }
 
-export class TGFXEmbindObject<T extends string> implements EmbindObject<T> {
+export class AdapterEmbindObject<T extends string> implements EmbindObject<T> {
   _type: T;
 
   private _deleted = false;
@@ -483,17 +504,17 @@ export class TGFXEmbindObject<T extends string> implements EmbindObject<T> {
   }
 }
 
-export class TGFXGrDirectContext
-  extends TGFXEmbindObject<"GrDirectContext">
+export class AdapterGrDirectContext
+  extends AdapterEmbindObject<"GrDirectContext">
   implements GrDirectContext
 {
-  constructor(readonly tgfxContext: TGFXContext) {
+  constructor(readonly tgfxContext: AdapterContext) {
     super();
   }
 
-  createSurface(width: number, height: number): TGFXSurface {
+  createSurface(width: number, height: number): AdapterSurface {
     const tgfxSurface = this.tgfxContext.tgfxView.getSurface();
-    return new TGFXSurface(this.tgfxContext, tgfxSurface, { width, height });
+    return new AdapterSurface(this.tgfxContext, tgfxSurface, { width, height });
   }
 
   getResourceCacheLimitBytes(): number {
@@ -510,12 +531,12 @@ export class TGFXGrDirectContext
   }
 }
 
-export class TGFXSurface
-  extends TGFXEmbindObject<"Surface">
+export class AdapterSurface
+  extends AdapterEmbindObject<"Surface">
   implements Surface
 {
   constructor(
-    readonly tgfxContext: TGFXContext,
+    readonly tgfxContext: AdapterContext,
     readonly tgfxSurface: any,
     readonly screenSize: { width: number; height: number }
   ) {
@@ -536,7 +557,7 @@ export class TGFXSurface
 
   getCanvas(): Canvas {
     const tgfxCanvas = this.tgfxSurface._getCanvas();
-    return new TGFXCanvas(tgfxCanvas);
+    return new AdapterCanvas(tgfxCanvas);
   }
 
   height(): number {
@@ -568,7 +589,7 @@ export class TGFXSurface
   }
 
   reportBackendTypeIsGPU(): boolean {
-    throw new Error("Method not implemented.");
+    return true;
   }
 
   requestAnimationFrame(drawFrame: (_: Canvas) => void): number {
@@ -598,7 +619,10 @@ export class TGFXSurface
   }
 }
 
-export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
+export class AdapterCanvas
+  extends AdapterEmbindObject<"Canvas">
+  implements Canvas
+{
   constructor(readonly tgfxCanvas: any) {
     super();
   }
@@ -751,9 +775,14 @@ export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
   drawParagraph(p: Paragraph, x: number, y: number): void {
     throw new Error("Method not implemented.");
   }
+
   drawPath(path: Path, paint: Paint): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.drawPath(
+      path instanceof AdapterPath ? path.tgfxPath : path,
+      paint instanceof AdapterPaint ? paint.tgfxPaint : paint
+    );
   }
+
   drawPatch(
     cubics: InputFlattenedPointArray,
     colors?: ColorIntArray | Float32Array[] | null | undefined,
@@ -775,7 +804,10 @@ export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
   }
 
   drawRect(rect: InputRect, paint: Paint): void {
-    this.tgfxCanvas.drawRect(rect, paint);
+    this.tgfxCanvas.drawRect(
+      rect,
+      paint instanceof AdapterPaint ? paint.tgfxPaint : paint
+    );
   }
 
   drawRect4f(
@@ -795,10 +827,10 @@ export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
   }
 
   drawRRect(rrect: InputRRect, paint: Paint): void {
-    const _rrect: TGFXRRect = rrect as any;
+    const _rrect: AdapterRRect = rrect as any;
     const path = new Adapter.CKAdapterModule.Path();
     path.addRoundRect(_rrect.rect, _rrect.radiusX, _rrect.radiusY, false, 0);
-    this.tgfxCanvas.drawPath(path, paint);
+    this.drawPath(path, paint);
   }
 
   drawShadow(
@@ -888,7 +920,360 @@ export class TGFXCanvas extends TGFXEmbindObject<"Canvas"> implements Canvas {
   }
 }
 
-interface TGFXRRect {
+export class AdapterPaint
+  extends AdapterEmbindObject<"Paint">
+  implements Paint
+{
+  constructor(readonly tgfxPaint: any = new Adapter.CKAdapterModule.Paint()) {
+    super();
+  }
+  copy(): Paint {
+    const paint = new AdapterPaint();
+    paint.setColor(this.getColor());
+    paint.setStrokeCap(this.getStrokeCap());
+    paint.setStrokeJoin(this.getStrokeJoin());
+    paint.setStrokeMiter(this.getStrokeMiter());
+    paint.setStrokeWidth(this.getStrokeWidth());
+    paint.setAlphaf(this.getAlpha());
+    paint.setStyle(this.getStyle());
+    return paint;
+  }
+  getColor(): Float32Array {
+    return this.tgfxPaint.getColor();
+  }
+  getStrokeCap(): EmbindEnumEntity {
+    return this.tgfxPaint.getStrokeCap();
+  }
+  getStrokeJoin(): EmbindEnumEntity {
+    return this.tgfxPaint.getStrokeJoin();
+  }
+  getStrokeMiter(): number {
+    return this.tgfxPaint.getStrokeMiter();
+  }
+  getStrokeWidth(): number {
+    return this.tgfxPaint.getStrokeWidth();
+  }
+  getAlpha(): number {
+    return this.tgfxPaint.getAlpha();
+  }
+  setAlphaf(alpha: number): void {
+    return this.tgfxPaint.setAlphaf(alpha);
+  }
+  setAntiAlias(aa: boolean): void {
+    throw new Error("Method not implemented.");
+  }
+  setBlendMode(mode: EmbindEnumEntity): void {
+    throw new Error("Method not implemented.");
+  }
+  setBlender(blender: Blender): void {
+    throw new Error("Method not implemented.");
+  }
+  setColor(color: InputColor, colorSpace?: ColorSpace | undefined): void {
+    return this.tgfxPaint.setColor(color);
+  }
+  setColorComponents(
+    r: number,
+    g: number,
+    b: number,
+    a: number,
+    colorSpace?: ColorSpace | undefined
+  ): void {
+    return this.setColor(Adapter.CKAdapterModule.Color(r, g, b, a));
+  }
+  setColorFilter(filter: ColorFilter | null): void {
+    throw new Error("Method not implemented.");
+  }
+  setColorInt(color: number, colorSpace?: ColorSpace | undefined): void {
+    const r = (color >> 16) & 0xff;
+    const g = (color >> 8) & 0xff;
+    const b = color & 0xff;
+    const a = (color >> 24) & 0xff;
+    return this.setColorComponents(r, g, b, a);
+  }
+  setDither(shouldDither: boolean): void {
+    throw new Error("Method not implemented.");
+  }
+  setImageFilter(filter: ImageFilter | null): void {
+    throw new Error("Method not implemented.");
+  }
+  setMaskFilter(filter: MaskFilter | null): void {
+    throw new Error("Method not implemented.");
+  }
+  setPathEffect(effect: PathEffect | null): void {
+    throw new Error("Method not implemented.");
+  }
+  setShader(shader: Shader | null): void {
+    throw new Error("Method not implemented.");
+  }
+  setStrokeCap(cap: EmbindEnumEntity): void {
+    return this.tgfxPaint.setStrokeCap(cap);
+  }
+  setStrokeJoin(join: EmbindEnumEntity): void {
+    return this.tgfxPaint.setStrokeJoin(join);
+  }
+  setStrokeMiter(limit: number): void {
+    return this.tgfxPaint.setStrokeMiter(limit);
+  }
+  setStrokeWidth(width: number): void {
+    return this.tgfxPaint.setStrokeWidth(width);
+  }
+  getStyle(): EmbindEnumEntity {
+    return this.tgfxPaint.getStyle();
+  }
+  setStyle(style: EmbindEnumEntity): void {
+    return this.tgfxPaint.setStyle(style);
+  }
+}
+
+class AdapterPath extends AdapterEmbindObject<"Path"> implements Path {
+  constructor(readonly tgfxPath: any = new Adapter.CKAdapterModule.Path()) {
+    super();
+  }
+  static CanInterpolate(path1: Path, path2: Path): boolean {
+    throw new Error("Method not implemented.");
+  }
+  static MakeFromCmds(cmds: InputCommands): Path | null {
+    throw new Error("Method not implemented.");
+  }
+  static MakeFromOp(one: Path, two: Path, op: EmbindEnumEntity): Path | null {
+    throw new Error("Method not implemented.");
+  }
+  static MakeFromPathInterpolation(
+    start: Path,
+    end: Path,
+    weight: number
+  ): Path | null {
+    throw new Error("Method not implemented.");
+  }
+  static MakeFromSVGString(str: string): Path | null {
+    throw new Error("Method not implemented.");
+  }
+  static MakeFromVerbsPointsWeights(
+    verbs: VerbList,
+    points: InputFlattenedPointArray,
+    weights?: WeightList | undefined
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  addArc(oval: InputRect, startAngle: number, sweepAngle: number): Path {
+    throw new Error("Method not implemented.");
+  }
+  addCircle(
+    x: number,
+    y: number,
+    r: number,
+    isCCW?: boolean | undefined
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  addOval(
+    oval: InputRect,
+    isCCW?: boolean | undefined,
+    startIndex?: number | undefined
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  addPath(...args: any[]): Path | null {
+    throw new Error("Method not implemented.");
+  }
+  addPoly(points: InputFlattenedPointArray, close: boolean): Path {
+    throw new Error("Method not implemented.");
+  }
+  addRect(rect: InputRect, isCCW?: boolean | undefined): Path {
+    throw new Error("Method not implemented.");
+  }
+  addRRect(rrect: InputRRect, isCCW?: boolean | undefined): Path {
+    throw new Error("Method not implemented.");
+  }
+  addVerbsPointsWeights(
+    verbs: VerbList,
+    points: InputFlattenedPointArray,
+    weights?: WeightList | undefined
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  arc(
+    x: number,
+    y: number,
+    radius: number,
+    startAngle: number,
+    endAngle: number,
+    isCCW?: boolean | undefined
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  arcToOval(
+    oval: InputRect,
+    startAngle: number,
+    endAngle: number,
+    forceMoveTo: boolean
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  arcToRotated(
+    rx: number,
+    ry: number,
+    xAxisRotate: number,
+    useSmallArc: boolean,
+    isCCW: boolean,
+    x: number,
+    y: number
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  arcToTangent(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    radius: number
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  close(): Path {
+    throw new Error("Method not implemented.");
+  }
+  computeTightBounds(outputArray?: Float32Array | undefined): Float32Array {
+    throw new Error("Method not implemented.");
+  }
+  conicTo(x1: number, y1: number, x2: number, y2: number, w: number): Path {
+    throw new Error("Method not implemented.");
+  }
+  contains(x: number, y: number): boolean {
+    throw new Error("Method not implemented.");
+  }
+  copy(): Path {
+    throw new Error("Method not implemented.");
+  }
+  countPoints(): number {
+    throw new Error("Method not implemented.");
+  }
+  cubicTo(
+    cpx1: number,
+    cpy1: number,
+    cpx2: number,
+    cpy2: number,
+    x: number,
+    y: number
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  dash(on: number, off: number, phase: number): boolean {
+    throw new Error("Method not implemented.");
+  }
+  equals(other: Path): boolean {
+    throw new Error("Method not implemented.");
+  }
+  getBounds(outputArray?: Float32Array | undefined): Float32Array {
+    throw new Error("Method not implemented.");
+  }
+  getFillType(): EmbindEnumEntity {
+    throw new Error("Method not implemented.");
+  }
+  getPoint(
+    index: number,
+    outputArray?: Float32Array | undefined
+  ): Float32Array {
+    throw new Error("Method not implemented.");
+  }
+  isEmpty(): boolean {
+    throw new Error("Method not implemented.");
+  }
+  isVolatile(): boolean {
+    throw new Error("Method not implemented.");
+  }
+  lineTo(x: number, y: number): Path {
+    this.tgfxPath.lineTo(x, y);
+    return this;
+  }
+  makeAsWinding(): Path | null {
+    throw new Error("Method not implemented.");
+  }
+  moveTo(x: number, y: number): Path {
+    this.tgfxPath.moveTo(x, y);
+    return this;
+  }
+  offset(dx: number, dy: number): Path {
+    throw new Error("Method not implemented.");
+  }
+  op(other: Path, op: EmbindEnumEntity): boolean {
+    throw new Error("Method not implemented.");
+  }
+  quadTo(x1: number, y1: number, x2: number, y2: number): Path {
+    throw new Error("Method not implemented.");
+  }
+  rArcTo(
+    rx: number,
+    ry: number,
+    xAxisRotate: number,
+    useSmallArc: boolean,
+    isCCW: boolean,
+    dx: number,
+    dy: number
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  rConicTo(
+    dx1: number,
+    dy1: number,
+    dx2: number,
+    dy2: number,
+    w: number
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  rCubicTo(
+    cpx1: number,
+    cpy1: number,
+    cpx2: number,
+    cpy2: number,
+    x: number,
+    y: number
+  ): Path {
+    throw new Error("Method not implemented.");
+  }
+  reset(): void {
+    throw new Error("Method not implemented.");
+  }
+  rewind(): void {
+    throw new Error("Method not implemented.");
+  }
+  rLineTo(x: number, y: number): Path {
+    throw new Error("Method not implemented.");
+  }
+  rMoveTo(x: number, y: number): Path {
+    throw new Error("Method not implemented.");
+  }
+  rQuadTo(x1: number, y1: number, x2: number, y2: number): Path {
+    throw new Error("Method not implemented.");
+  }
+  setFillType(fill: EmbindEnumEntity): void {
+    throw new Error("Method not implemented.");
+  }
+  setIsVolatile(volatile: boolean): void {
+    throw new Error("Method not implemented.");
+  }
+  simplify(): boolean {
+    throw new Error("Method not implemented.");
+  }
+  stroke(opts?: StrokeOpts | undefined): Path | null {
+    throw new Error("Method not implemented.");
+  }
+  toCmds(): Float32Array {
+    throw new Error("Method not implemented.");
+  }
+  toSVGString(): string {
+    throw new Error("Method not implemented.");
+  }
+  transform(...args: any[]): Path {
+    throw new Error("Method not implemented.");
+  }
+  trim(startT: number, stopT: number, isComplement: boolean): Path | null {
+    throw new Error("Method not implemented.");
+  }
+}
+
+interface AdapterRRect {
   rect: InputRect;
   radiusX: number;
   radiusY: number;

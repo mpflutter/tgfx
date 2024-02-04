@@ -23,6 +23,7 @@
 #include "tgfx/core/Path.h"
 #include "tgfx/core/Point.h"
 #include "tgfx/core/Rect.h"
+#include "tgfx/core/Stroke.h"
 #include "tgfx/gpu/Surface.h"
 
 namespace ckadapter {
@@ -121,6 +122,16 @@ EMSCRIPTEN_BINDINGS(TGFXSKAdapter) {
       .value("Fill", PaintStyle::Fill)
       .value("Stroke", PaintStyle::Stroke);
 
+  enum_<LineCap>("StrokeCap")
+      .value("Butt", LineCap::Butt)
+      .value("Round", LineCap::Round)
+      .value("Square", LineCap::Square);
+
+  enum_<LineJoin>("StrokeJoin")
+      .value("Bevel", LineJoin::Bevel)
+      .value("Miter", LineJoin::Miter)
+      .value("Round", LineJoin::Round);
+
   class_<Color>("Color")
       .class_function("Transparent", &Color::Transparent, allow_raw_pointers())
       .class_function("Black", &Color::Black, allow_raw_pointers())
@@ -133,10 +144,23 @@ EMSCRIPTEN_BINDINGS(TGFXSKAdapter) {
       .function("getStyle", &Paint::getStyle)
       .function("setStyle", &Paint::setStyle)
       .function("getColor", &Paint::getColor, allow_raw_pointers())
-      .function("setColor", &Paint::setColor, allow_raw_pointers());
+      .function("setColor", &Paint::setColor, allow_raw_pointers())
+      .function("getAlpha", &Paint::getAlpha)
+      .function("setAlpha", &Paint::setAlpha)
+      .function("setAlphaf", &Paint::setAlpha)
+      .function("getStrokeCap", &Paint::getLineCap)
+      .function("setStrokeCap", &Paint::setLineCap)
+      .function("getStrokeJoin", &Paint::getLineJoin)
+      .function("setStrokeJoin", &Paint::setLineJoin)
+      .function("getStrokeWidth", &Paint::getStrokeWidth)
+      .function("setStrokeWidth", &Paint::setStrokeWidth)
+      .function("getStrokeMiter", &Paint::getMiterLimit)
+      .function("setStrokeMiter", &Paint::setMiterLimit);
 
   class_<Path>("Path")
       .constructor<>()
+      .function("moveTo", static_cast<void (Path::*)(float, float)>(&Path::moveTo))
+      .function("lineTo", static_cast<void (Path::*)(float, float)>(&Path::lineTo))
       .function("addRoundRect", &Path::addRoundRect)
       .function("reset", &Path::reset);
 }

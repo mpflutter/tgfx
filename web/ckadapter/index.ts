@@ -95,16 +95,26 @@ window.onload = async () => {
       const canvas = surface.getCanvas();
       console.log("canvas", canvas);
       const paint = new CanvasKit.Paint();
-      paint.setStyle(CanvasKit.PaintStyle.Fill);
-      const color = CanvasKit.Color(255, 0, 0, 255);
+      paint.setStyle(CanvasKit.PaintStyle.Stroke);
+      paint.setStrokeWidth(20);
+      paint.setStrokeMiter(4);
+      paint.setStrokeCap(CanvasKit.StrokeCap.Round);
+      paint.setStrokeJoin(CanvasKit.StrokeJoin.Round);
+      // const color = CanvasKit.Color(255, 0, 0, 255);
+      const color = CanvasKit.CYAN;
       paint.setColor(color);
       console.log("paint", paint, "color", color);
-      const rrect = CanvasKit.RRectXY(
-        CanvasKit.XYWHRect(44, 44, 100, 100),
-        6,
-        6
-      );
-      canvas.drawRRect(rrect, paint);
+      // const rrect = CanvasKit.RRectXY(
+      //   CanvasKit.XYWHRect(44, 44, 100, 100),
+      //   26,
+      //   26
+      // );
+      // canvas.drawRRect(rrect, paint);
+      const path = new CanvasKit.Path();
+      path.moveTo(44, 44);
+      path.lineTo(144, 144);
+      path.lineTo(44, 144);
+      canvas.drawPath(path, paint);
       surface.flush();
 
       // setTimeout(() => {
