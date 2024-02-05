@@ -288,7 +288,7 @@ export class Adapter implements CanvasKit {
   M44: Matrix4x4Helpers;
   Vector: VectorHelpers;
   AlphaType: AlphaTypeEnumValues;
-  BlendMode: BlendModeEnumValues;
+  BlendMode: BlendModeEnumValues; // done
   BlurStyle: BlurStyleEnumValues;
   ClipOp: ClipOpEnumValues;
   ColorChannel: ColorChannelEnumValues;
@@ -311,15 +311,15 @@ export class Adapter implements CanvasKit {
   VertexMode: VertexModeEnumValues;
   InputState: InputStateEnumValues;
   ModifierKey: ModifierKeyEnumValues;
-  TRANSPARENT: Float32Array;
-  BLACK: Float32Array;
-  WHITE: Float32Array;
-  RED: Float32Array;
-  GREEN: Float32Array;
-  BLUE: Float32Array;
-  YELLOW: Float32Array;
-  CYAN: Float32Array;
-  MAGENTA: Float32Array;
+  TRANSPARENT: Float32Array; // done
+  BLACK: Float32Array; // done
+  WHITE: Float32Array; // done
+  RED: Float32Array; // done
+  GREEN: Float32Array; // done
+  BLUE: Float32Array; // done
+  YELLOW: Float32Array; // done
+  CYAN: Float32Array; // done
+  MAGENTA: Float32Array; // done
   MOVE_VERB: number;
   LINE_VERB: number;
   QUAD_VERB: number;
@@ -331,10 +331,10 @@ export class Adapter implements CanvasKit {
   ShadowTransparentOccluder: number;
   ShadowGeometricOnly: number;
   ShadowDirectionalLight: number;
-  gpu?: boolean | undefined;
-  managed_skottie?: boolean | undefined;
+  gpu?: boolean | undefined = true; // done
+  managed_skottie?: boolean | undefined; // not support
   rt_effect?: boolean | undefined;
-  skottie?: boolean | undefined;
+  skottie?: boolean | undefined; // not support
   Affinity: AffinityEnumValues;
   DecorationStyle: DecorationStyleEnumValues;
   FontSlant: FontSlantEnumValues;
@@ -365,6 +365,7 @@ export class Adapter implements CanvasKit {
     this.Path = AdapterPath as any;
     this.PathOp = CKAdapterModule.PathOp;
     this.FillType = CKAdapterModule.FillType;
+    this.BlendMode = CKAdapterModule.BlendMode;
     this.TRANSPARENT = this.Color(0, 0, 0, 0);
     this.BLACK = this.Color(0, 0, 0);
     this.WHITE = this.Color(255, 255, 255);
@@ -625,19 +626,26 @@ export class AdapterCanvas
   extends AdapterEmbindObject<"Canvas">
   implements Canvas
 {
+  private stateCount = 0;
+
   constructor(readonly tgfxCanvas: any) {
     super();
   }
 
   clear(color: InputColor): void {
-    throw new Error("Method not implemented.");
+    return this.tgfxCanvas.clear(color);
   }
+
   clipPath(path: Path, op: EmbindEnumEntity, doAntiAlias: boolean): void {
-    throw new Error("Method not implemented.");
+    return this.tgfxCanvas.clipPath(
+      path instanceof AdapterPath ? path.tgfxPath : path
+    );
   }
+
   clipRect(rect: InputRect, op: EmbindEnumEntity, doAntiAlias: boolean): void {
-    throw new Error("Method not implemented.");
+    return this.tgfxCanvas.clipRect(rect);
   }
+
   clipRRect(
     rrect: InputRRect,
     op: EmbindEnumEntity,
@@ -645,9 +653,11 @@ export class AdapterCanvas
   ): void {
     throw new Error("Method not implemented.");
   }
+
   concat(m: InputMatrix): void {
     throw new Error("Method not implemented.");
   }
+
   drawArc(
     oval: InputRect,
     startAngle: number,
@@ -657,6 +667,7 @@ export class AdapterCanvas
   ): void {
     throw new Error("Method not implemented.");
   }
+
   drawAtlas(
     atlas: Image,
     srcRects: InputFlattenedRectangleArray,
@@ -668,12 +679,22 @@ export class AdapterCanvas
   ): void {
     throw new Error("Method not implemented.");
   }
+
   drawCircle(cx: number, cy: number, radius: number, paint: Paint): void {
-    throw new Error("Method not implemented.");
+    const circlePath = new AdapterPath();
+    circlePath.addCircle(cx, cy, radius);
+    circlePath.close();
+    this.drawPath(circlePath, paint);
   }
+
   drawColor(color: InputColor, blendMode?: EmbindEnumEntity | undefined): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.setBlendMode(blendMode);
+    const paint = new AdapterPaint();
+    paint.setColor(color);
+    this.drawPaint(paint);
+    this.tgfxCanvas.setBlendMode(Adapter.CKAdapterModule.BlendMode.SrcOver);
   }
+
   drawColorComponents(
     r: number,
     g: number,
@@ -681,14 +702,27 @@ export class AdapterCanvas
     a: number,
     blendMode?: EmbindEnumEntity | undefined
   ): void {
-    throw new Error("Method not implemented.");
+    this.drawColor(
+      Adapter.CKAdapterModule.Color.FromRGBA(r, g, b, a),
+      blendMode
+    );
   }
+
   drawColorInt(color: number, blendMode?: EmbindEnumEntity | undefined): void {
-    throw new Error("Method not implemented.");
+    const r = (color >> 24) & 0xff;
+    const g = (color >> 16) & 0xff;
+    const b = (color >> 8) & 0xff;
+    const a = color & 0xff;
+    this.drawColor(
+      Adapter.CKAdapterModule.Color.FromRGBA(r, g, b, a),
+      blendMode
+    );
   }
+
   drawDRRect(outer: InputRRect, inner: InputRRect, paint: Paint): void {
     throw new Error("Method not implemented.");
   }
+
   drawGlyphs(
     glyphs: InputGlyphIDArray,
     positions: InputFlattenedPointArray,
@@ -765,15 +799,25 @@ export class AdapterCanvas
   ): void {
     throw new Error("Method not implemented.");
   }
+
   drawLine(x0: number, y0: number, x1: number, y1: number, paint: Paint): void {
-    throw new Error("Method not implemented.");
+    const path = new AdapterPath();
+    path.moveTo(x0, y0);
+    path.lineTo(x1, y1);
+    path.close();
+    this.drawPath(path, paint);
   }
+
   drawOval(oval: InputRect, paint: Paint): void {
-    throw new Error("Method not implemented.");
+    const ovalPath = new AdapterPath();
+    ovalPath.addOval(oval);
+    this.drawPath(ovalPath, paint);
   }
+
   drawPaint(paint: Paint): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.drawPaint(paint);
   }
+
   drawParagraph(p: Paragraph, x: number, y: number): void {
     throw new Error("Method not implemented.");
   }
@@ -846,6 +890,7 @@ export class AdapterCanvas
   ): void {
     throw new Error("Method not implemented.");
   }
+
   drawText(str: string, x: number, y: number, paint: Paint, font: Font): void {
     throw new Error("Method not implemented.");
   }
@@ -879,18 +924,26 @@ export class AdapterCanvas
   ): Float32Array | Uint8Array | null {
     throw new Error("Method not implemented.");
   }
+
   restore(): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.restore();
+    this.stateCount--;
   }
+
   restoreToCount(saveCount: number): void {
     throw new Error("Method not implemented.");
   }
+
   rotate(rot: number, rx: number, ry: number): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.rotate(rot, rx, ry);
   }
+
   save(): number {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.save();
+    this.stateCount++;
+    return this.stateCount;
   }
+
   saveLayer(
     paint?: Paint | undefined,
     bounds?: InputRect | null | undefined,
@@ -899,15 +952,19 @@ export class AdapterCanvas
   ): number {
     throw new Error("Method not implemented.");
   }
+
   scale(sx: number, sy: number): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.scale(sx, sy);
   }
+
   skew(sx: number, sy: number): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.skew(sx, sy);
   }
+
   translate(dx: number, dy: number): void {
-    throw new Error("Method not implemented.");
+    this.tgfxCanvas.translate(dx, dy);
   }
+
   writePixels(
     pixels: Uint8Array | number[],
     srcWidth: number,

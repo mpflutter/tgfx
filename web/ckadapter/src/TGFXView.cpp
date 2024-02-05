@@ -17,8 +17,10 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "TGFXView.h"
+#include "tgfx/core/BlendMode.h"
 #include "tgfx/core/Canvas.h"
 #include "tgfx/core/Color.h"
+#include "tgfx/core/Matrix.h"
 #include "tgfx/core/Paint.h"
 #include "tgfx/core/Path.h"
 #include "tgfx/core/PathTypes.h"
@@ -92,8 +94,46 @@ EMSCRIPTEN_BINDINGS(TGFXSKAdapter) {
 
   class_<Canvas>("Canvas")
       .smart_ptr<std::shared_ptr<Canvas>>("Canvas")
+      .function("getBlendMode", &Canvas::getBlendMode)
+      .function("setBlendMode", &Canvas::setBlendMode)
+      .function("clipRect", &Canvas::clipRect)
+      .function("clipPath", &Canvas::clipPath)
+      .function("clear", &Canvas::clear)
       .function("drawRect", &Canvas::drawRect)
-      .function("drawPath", &Canvas::drawPath);
+      .function("drawPath", &Canvas::drawPath)
+      .function("drawPaint", optional_override([](Canvas* canvas, const Paint& paint) {
+                  auto surface = canvas->getSurface();
+                  int width = surface->width();
+                  int height = surface->height();
+                  canvas->drawRect(Rect::MakeWH(width, height), paint);
+                }),
+                allow_raw_pointers())
+      .function("scale", optional_override([](Canvas* canvas, float sx, float sy) {
+                  auto matrix = canvas->getMatrix();
+                  matrix.postScale(sx, sy);
+                  canvas->setMatrix(matrix);
+                }),
+                allow_raw_pointers())
+      .function("skew", optional_override([](Canvas* canvas, float sx, float sy) {
+                  auto matrix = canvas->getMatrix();
+                  matrix.postSkew(sx, sy);
+                  canvas->setMatrix(matrix);
+                }),
+                allow_raw_pointers())
+      .function("translate", optional_override([](Canvas* canvas, float dx, float dy) {
+                  auto matrix = canvas->getMatrix();
+                  matrix.postTranslate(sx, sy);
+                  canvas->setMatrix(matrix);
+                }),
+                allow_raw_pointers())
+      .function("rotate", optional_override([](Canvas* canvas, float degrees, float px, float py) {
+                  auto matrix = canvas->getMatrix();
+                  matrix.postRotate(degrees, px, py);
+                  canvas->setMatrix(matrix);
+                }),
+                allow_raw_pointers())
+      .function("save", &Canvas::save)
+      .function("restore", &Canvas::restore);
 
   class_<Rect>("Rect")
       .constructor<>()
@@ -205,4 +245,35 @@ EMSCRIPTEN_BINDINGS(TGFXSKAdapter) {
       .value("EvenOdd", PathFillType::EvenOdd)
       .value("InverseWinding", PathFillType::InverseWinding)
       .value("InverseEvenOdd", PathFillType::InverseEvenOdd);
+
+  enum_<BlendMode>("BlendMode")
+      .value("Clear", BlendMode::Clear)
+      .value("Src", BlendMode::Src)
+      .value("Dst", BlendMode::Dst)
+      .value("SrcOver", BlendMode::SrcOver)
+      .value("DstOver", BlendMode::DstOver)
+      .value("SrcIn", BlendMode::SrcIn)
+      .value("DstIn", BlendMode::DstIn)
+      .value("SrcOut", BlendMode::SrcOut)
+      .value("DstOut", BlendMode::DstOut)
+      .value("SrcATop", BlendMode::SrcATop)
+      .value("DstATop", BlendMode::DstATop)
+      .value("Xor", BlendMode::Xor)
+      .value("Plus", BlendMode::Plus)
+      .value("Modulate", BlendMode::Modulate)
+      .value("Screen", BlendMode::Screen)
+      .value("Overlay", BlendMode::Overlay)
+      .value("Darken", BlendMode::Darken)
+      .value("Lighten", BlendMode::Lighten)
+      .value("ColorDodge", BlendMode::ColorDodge)
+      .value("ColorBurn", BlendMode::ColorBurn)
+      .value("HardLight", BlendMode::HardLight)
+      .value("SoftLight", BlendMode::SoftLight)
+      .value("Difference", BlendMode::Difference)
+      .value("Exclusion", BlendMode::Exclusion)
+      .value("Multiply", BlendMode::Multiply)
+      .value("Hue", BlendMode::Hue)
+      .value("Saturation", BlendMode::Saturation)
+      .value("Color", BlendMode::Color)
+      .value("Luminosity", BlendMode::Luminosity);
 }

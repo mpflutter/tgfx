@@ -125,6 +125,7 @@ window.onload = async () => {
       ovalPath.addOval(CanvasKit.XYWHRect(166, 166, 120, 44));
       path.addPath(ovalPath);
 
+      canvas.scale(3, 3);
       canvas.drawPath(path, paint);
 
       console.log("isEmpty", path.isEmpty());
