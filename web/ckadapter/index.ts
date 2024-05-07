@@ -92,64 +92,40 @@ window.onload = async () => {
     );
     console.log("surface", surface);
     if (surface) {
-      const canvas = surface.getCanvas();
-      console.log("canvas", canvas);
       const paint = new CanvasKit.Paint();
+      paint.setColor(CanvasKit.Color4f(0.9, 0, 0, 1.0));
       paint.setStyle(CanvasKit.PaintStyle.Stroke);
-      paint.setStrokeWidth(20);
-      paint.setStrokeMiter(4);
-      paint.setStrokeCap(CanvasKit.StrokeCap.Round);
-      paint.setStrokeJoin(CanvasKit.StrokeJoin.Round);
-      // const color = CanvasKit.Color(255, 0, 0, 255);
-      const color = CanvasKit.CYAN;
-      paint.setColor(color);
-      console.log("paint", paint, "color", color);
-      // const rrect = CanvasKit.RRectXY(
-      //   CanvasKit.XYWHRect(44, 44, 100, 100),
-      //   26,
-      //   26
-      // );
-      // canvas.drawRRect(rrect, paint);
-      const path = new CanvasKit.Path();
-      path.moveTo(44, 44);
-      path.lineTo(144, 144);
-      path.cubicTo(144, 144, 88, 88, 200, 200);
-      path.lineTo(44, 144);
-      path.close();
+      paint.setAntiAlias(true);
+      // const rr = CanvasKit.RRectXY(CanvasKit.LTRBRect(10, 60, 210, 260), 25, 15);
+      const w = 100; // size of rect
+      const h = 60;
+      let x = 10; // initial position of top left corner.
+      let y = 60;
+      let dirX = 1; // box is always moving at a constant speed in one of the four diagonal directions
+      let dirY = 1;
 
-      const circlePath = new CanvasKit.Path();
-      circlePath.addCircle(188, 188, 88);
-      path.addPath(circlePath);
+      function drawFrame(canvas) {
+        // boundary check
+        if (x < 0 || x + w > 300) {
+          dirX *= -1; // reverse x direction when hitting side walls
+        }
+        if (y < 0 || y + h > 300) {
+          dirY *= -1; // reverse y direction when hitting top and bottom walls
+        }
+        // move
+        x += dirX;
+        y += dirY;
 
-      const ovalPath = new CanvasKit.Path();
-      ovalPath.addOval(CanvasKit.XYWHRect(166, 166, 120, 44));
-      path.addPath(ovalPath);
-
-      canvas.scale(3, 3);
-      canvas.drawPath(path, paint);
-
-      console.log("isEmpty", path.isEmpty());
-      console.log("path.contains(44, 44)", path.contains(44, 44));
-      console.log("path.getBounds", path.getBounds());
-
-      // canvas.drawPath(ovalPath, paint);
-      surface.flush();
-
-      // setTimeout(() => {
-      //   const paint = new CanvasKit.Paint();
-      //   paint.setStyle(CanvasKit.PaintStyle.Fill);
-      //   const color = CanvasKit.Color(255, 255, 0, 255);
-      //   paint.setColor(color);
-      //   console.log("paint", paint, "color", color);
-      //   const rect = CanvasKit.XYWHRect(44, 144, 22, 22);
-      //   console.log("rect", rect);
-      //   canvas.drawRect(rect, paint);
-      //   const rect2 = CanvasKit.XYWHRect(44, 44, 100, 100);
-      //   // console.log("rect", rect);
-      //   canvas.drawRect(rect, paint);
-      //   canvas.drawRect(rect2, paint);
-      //   surface.flush();
-      // }, 2000);
+        canvas.clear(CanvasKit.WHITE);
+        const rr = CanvasKit.RRectXY(
+          CanvasKit.LTRBRect(x, y, x + w, y + h),
+          25,
+          15
+        );
+        canvas.drawRRect(rr, paint);
+        surface!.requestAnimationFrame(drawFrame);
+      }
+      surface.requestAnimationFrame(drawFrame);
     }
   }
   //   let image = await loadImage("../../resources/assets/bridge.jpg");

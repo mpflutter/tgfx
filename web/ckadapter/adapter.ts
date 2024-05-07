@@ -548,6 +548,7 @@ export class AdapterSurface
 
   drawOnce(drawFrame: (_: Canvas) => void): void {
     drawFrame(this.getCanvas());
+    this.flush();
   }
 
   dispose(): void {
@@ -599,6 +600,7 @@ export class AdapterSurface
     if (typeof window === "object" && (window as any).requestAnimationFrame) {
       return (window as any).requestAnimationFrame(() => {
         drawFrame(this.getCanvas());
+        this.flush();
       }) as number;
     } else {
       return -1;
@@ -985,7 +987,9 @@ export class AdapterPaint
 {
   constructor(readonly tgfxPaint: any = new Adapter.CKAdapterModule.Paint()) {
     super();
+    this.setStrokeWidth(1);
   }
+
   copy(): Paint {
     const paint = new AdapterPaint();
     paint.setColor(this.getColor());
@@ -1019,7 +1023,7 @@ export class AdapterPaint
     return this.tgfxPaint.setAlphaf(alpha);
   }
   setAntiAlias(aa: boolean): void {
-    throw new Error("Method not implemented.");
+    // TGFX Not support setAntiAlias
   }
   setBlendMode(mode: EmbindEnumEntity): void {
     throw new Error("Method not implemented.");

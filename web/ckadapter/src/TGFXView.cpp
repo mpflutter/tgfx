@@ -133,7 +133,8 @@ EMSCRIPTEN_BINDINGS(TGFXSKAdapter) {
                 }),
                 allow_raw_pointers())
       .function("save", &Canvas::save)
-      .function("restore", &Canvas::restore);
+      .function("restore", &Canvas::restore)
+      .function("clear", &Canvas::clear);
 
   class_<Rect>("Rect")
       .constructor<>()
